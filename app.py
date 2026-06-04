@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 from datetime import datetime, timedelta
+import requests
 
 # 페이지 설정
 st.set_page_config(
@@ -20,12 +21,47 @@ else:
     matplotlib.rcParams['font.family'] = 'DejaVu Sans'
 matplotlib.rcParams['axes.unicode_minus'] = False
 
-# CSV 읽기
-@st.cache_data
+# Supabase 설정
+def get_supabase_config():
+    # secrets.toml에서 Supabase 설정 읽기
+    try:
+        supabase_url = st.secrets.get("supabase_url") or st.secrets.get("supabase", {}).get("url")
+        supabase_key = st.secrets.get("supabase_key") or st.secrets.get("supabase", {}).get("key")
+
+        if not supabase_url or not supabase_key:
+            st.error("Supabase 설정이 없습니다. secrets.toml을 확인하세요.")
+            st.stop()
+
+        return supabase_url, supabase_key
+    except Exception as e:
+        st.error(f"설정 로드 오류: {str(e)}")
+        st.stop()
+
+# Supabase REST API에서 데이터 읽기
+@st.cache_data(ttl=0)
 def load_data():
-    df = pd.read_csv('data/sales.csv')
-    df['date'] = pd.to_datetime(df['date'])
-    return df
+    try:
+        supabase_url, supabase_key = get_supabase_config()
+
+        url = f"{supabase_url}/rest/v1/sales"
+        headers = {
+            "apikey": supabase_key,
+            "Content-Type": "application/json"
+        }
+
+        response = requests.get(url, headers=headers, timeout=10)
+
+        if response.status_code != 200:
+            st.error(f"Supabase 데이터 로드 실패: {response.status_code}")
+            st.stop()
+
+        data = response.json()
+        df = pd.DataFrame(data)
+        df['date'] = pd.to_datetime(df['date'])
+        return df
+    except Exception as e:
+        st.error(f"데이터 로드 중 오류: {str(e)}")
+        st.stop()
 
 df = load_data()
 
