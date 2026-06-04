@@ -13,7 +13,11 @@ st.set_page_config(
 )
 
 # 한글 폰트 설정
-matplotlib.rcParams['font.family'] = 'Malgun Gothic'  # Windows 맑은 고딕
+import platform
+if platform.system() == 'Windows':
+    matplotlib.rcParams['font.family'] = 'Malgun Gothic'
+else:
+    matplotlib.rcParams['font.family'] = 'DejaVu Sans'
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 # CSV 읽기
